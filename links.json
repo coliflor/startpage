@@ -1,0 +1,51 @@
+{
+  "categories": [
+    {
+      "name": "Search",
+      "links": [
+        {
+          "name": "Google",
+          "url": "https://www.google.com/"
+        },
+        {
+          "name": "Duck",
+          "url": "https://duckduckgo.com/"
+        }
+      ]
+    },
+    {
+      "name": "Social",
+      "links": [
+        {
+          "name": "Youtube",
+          "url": "https://youtube.com"
+        },
+        {
+          "name": "GitHub",
+          "url": "https://github.com/coliflor"
+        },
+        {
+          "name": "Twitch",
+          "url": "https://twitch.tv/"
+        }
+      ]
+    },
+    {
+      "name": "Shops",
+      "links": [
+        {
+          "name": "Aliexpress",
+          "url": "https://es.aliexpress.com/"
+        },
+        {
+          "name": "Ebay",
+          "url": "https://www.ebay.es/"
+        },
+        {
+          "name": "Etsy",
+          "url": "https://www.etsy.com"
+        }
+      ]
+    }
+  ]
+}
