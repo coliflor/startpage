@@ -12,7 +12,7 @@ h1 {
     margin-bottom: 15px;
 }
 #container {
-		width: 60%;
+		width: 80%;
 		margin: 0 auto;
 }
 #links-container {
@@ -25,7 +25,7 @@ h1 {
 }
 .square-section {
 		width: 200px;
-		height: 250px;
+		height: 300px;
 		border: 2px solid black;
 		padding: 8px;
 		box-sizing: border-box;
@@ -53,7 +53,13 @@ h1 {
 		flex-direction: column;
 		gap: 4px;
 }
+.link-item.dragging {
+  opacity: 0.7;
+  border: 2px dashed #aaa;
+  cursor: grabbing;
+}
 .link-item {
+		cursor: grab;
 		border: 1px solid #f9f871;
 		padding: 4px;
 		text-align: left;

@@ -23,6 +23,8 @@ async function loadLinks() {
         category.links.forEach(link => {
             const linkItem = document.createElement('div');
             linkItem.classList.add('link-item');
+            linkItem.dataset.category = category.name;
+						linkItem.draggable = true;
             linkItem.innerHTML = `<a href="${link.url}">${link.name}</a>`;
             linksGrid.appendChild(linkItem);
         });
@@ -41,8 +43,11 @@ async function loadLinks() {
         categorySelect.appendChild(option);
     });
 
-		// Search
-		initializeSearch();
+    // Initialize search (assuming this is already defined)
+    initializeSearch();
+
+    // Initialize drag and drop after links are loaded
+    initializeDragAndDrop();
 }
 
 async function addLink() {
@@ -309,4 +314,81 @@ function resetCalculator() {
     waitingForSecondValue = false;
 }
 
-/* */
+/* Drag and drop */
+function initializeDragAndDrop() {
+    const linksGrids = document.querySelectorAll('.links-grid');
+    let draggedItem = null;
+
+    function handleDragStart(event) {
+        draggedItem = event.target.closest('.link-item');
+        if (!draggedItem) return;
+
+        draggedItem.classList.add('dragging');
+        event.dataTransfer.setData('text/plain', null); // Required for Firefox
+    }
+
+    function handleDragOver(event) {
+        event.preventDefault(); // Allow drop
+        if (!draggedItem) return;
+
+        const dropTarget = event.target.closest('.link-item');
+        const currentLinksGrid = draggedItem.closest('.links-grid');
+        const dropTargetLinksGrid = dropTarget ? dropTarget.closest('.links-grid') : null;
+
+        if (dropTarget && currentLinksGrid === dropTargetLinksGrid && draggedItem !== dropTarget) {
+            const draggedIndex = Array.from(currentLinksGrid.children).indexOf(draggedItem);
+            const dropIndex = Array.from(currentLinksGrid.children).indexOf(dropTarget);
+
+            if (draggedIndex < dropIndex) {
+                dropTarget.after(draggedItem);
+            } else {
+                dropTarget.before(draggedItem);
+            }
+        }
+    }
+
+		function handleDragEnd(event) {
+				if (!draggedItem) return;
+				draggedItem.classList.remove('dragging');
+
+				const currentLinksGrid = draggedItem.closest('.links-grid');
+				const categoryName = draggedItem.dataset.category;
+				if (currentLinksGrid && categoryName) {
+						const linkItemsInCategory = currentLinksGrid.querySelectorAll(`[data-category="${categoryName}"]`);
+						const newOrder = Array.from(linkItemsInCategory).map(item => {
+								return item.querySelector('a').textContent; // Send the link name
+						});
+
+						sendNewOrderToServer(categoryName, newOrder);
+				}
+
+				draggedItem = null;
+		}
+
+		function sendNewOrderToServer(category, order) {
+				fetch('/api/reorder-links', {
+						method: 'POST',
+						headers: {
+								'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({ category: category, order: order }),
+				})
+						.then(response => {
+								if (!response.ok) {
+										console.error('Failed to send link order to server:', response.status);
+								} else {
+										console.log('Link order updated on server.');
+										// Optionally reload links to ensure consistency
+								}
+						})
+						.catch(error => {
+								console.error('Error sending link order to server:', error);
+						});
+		}
+
+    linksGrids.forEach(grid => {
+        grid.addEventListener('dragstart', handleDragStart);
+        grid.addEventListener('dragover', handleDragOver);
+        grid.addEventListener('dragend', handleDragEnd);
+    });
+}
