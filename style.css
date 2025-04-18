@@ -38,7 +38,13 @@ h1 {
 		background: #b36fae;
 		border-radius: 5px;
 }
+.category-container.dragging-category {
+    opacity: 0.7;
+    border: 2px dashed #aaa;
+    cursor: grabbing;
+}
 .category-container {
+		cursor: grab;
 		justify-content: flex-start;
 }
 .category-title {
@@ -267,4 +273,28 @@ h1 {
 		grid-row: 2 / span 4;
 		background: hsl(357, 100%, 72%);
 		height: auto;
+}
+
+/* Style for the autocomplete list container */
+.command-autocomplete-list {
+		padding: 8px;
+		border: 1px solid black;
+		border-radius: 5px;
+		box-sizing: border-box;
+		z-index: 1;
+    background-color: white;
+    list-style-type: none;
+    padding: 0;
+}
+
+.command-autocomplete-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.command-autocomplete-item:hover {
+    background-color: #f0f0f0;
+    color: #007bff;
 }

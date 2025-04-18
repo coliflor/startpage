@@ -50,3 +50,9 @@ After installation, you can verify that Deno is installed correctly by running t
 
 ```bash
 deno --version
+```
+
+## Run the Project
+```bash
+deno run --allow-net --allow-read --allow-write server.ts
+```

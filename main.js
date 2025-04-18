@@ -7,6 +7,7 @@ async function loadLinks() {
     data.categories.forEach(category => {
         const categoryDiv = document.createElement('div');
         categoryDiv.classList.add('square-section', 'category-container');
+				categoryDiv.draggable = true;
 
         const categoryHeader = document.createElement('div');
         categoryHeader.classList.add('category-header');
@@ -43,7 +44,7 @@ async function loadLinks() {
         categorySelect.appendChild(option);
     });
 
-    // Initialize search (assuming this is already defined)
+    // Initialize search
     initializeSearch();
 
     // Initialize drag and drop after links are loaded
@@ -195,27 +196,199 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Search bar keybinds */
 document.addEventListener('DOMContentLoaded', function() {
-		const searchInput = document.getElementById('link-search');
+    const searchInput = document.getElementById('link-search');
+    const searchContainer = document.getElementById('search-container');
+    const autocompleteList = document.createElement('ul');
 
-		if (searchInput) {
-				// Keybind to select the search bar (e.g., Escape)
-				document.addEventListener('keydown', function(event) {
-						if (event.key === 'Escape') {
-								event.preventDefault(); // Prevent default browser behavior
-								searchInput.focus();
-						}
-				});
+    if (!searchContainer) {
+        console.error("Search container element with ID 'search-container' not found.");
+        return;
+    }
 
-				// Keybind to delete the content of the search bar (e.g., Alt + Backspace)
-				document.addEventListener('keydown', function(event) {
-						if (event.altKey && event.key === 'Backspace') {
-								event.preventDefault(); // Prevent default browser behavior
-								searchInput.value = '';
-						}
-				});
-		} else {
-				console.error("Search input element with ID 'link-search' not found.");
-		}
+    autocompleteList.id = 'command-autocomplete';
+    autocompleteList.classList.add('command-autocomplete-list');
+    autocompleteList.style.position = 'absolute';
+    autocompleteList.style.zIndex = '1001';
+    autocompleteList.style.display = 'none'; // Initially hidden
+    searchContainer.style.position = 'relative'; // Ensure search container is positioned for absolute child
+    searchContainer.appendChild(autocompleteList);
+
+    // Position the autocomplete list relative to the search input
+    function updateAutocompletePosition() {
+        if (searchInput && autocompleteList && searchContainer) {
+            const inputRect = searchInput.getBoundingClientRect();
+            const containerRect = searchContainer.getBoundingClientRect();
+
+            autocompleteList.style.top = `${inputRect.bottom - containerRect.top + window.scrollY}px`;
+            autocompleteList.style.left = `${inputRect.left - containerRect.left + window.scrollX}px`;
+            autocompleteList.style.width = `${inputRect.width}px`; // Match input width
+        }
+    }
+
+    // Update position on initial load and window resize
+    updateAutocompletePosition();
+    window.addEventListener('resize', updateAutocompletePosition);
+
+    const availableCommands = [
+        ':link-delete ',
+        ':category-delete '
+        // Add more commands here as you implement them
+    ];
+
+    if (searchInput) {
+        // Keybind to select the search bar (Escape)
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                searchInput.focus();
+            }
+        });
+
+        // Keybind to delete the content of the search bar (Alt + Backspace)
+        document.addEventListener('keydown', function(event) {
+            if (event.altKey && event.key === 'Backspace') {
+                event.preventDefault();
+                searchInput.value = '';
+            }
+        });
+
+        // Command mode functionality and autocomplete
+        searchInput.addEventListener('input', function() {
+            const inputValue = searchInput.value.trim();
+            autocompleteList.innerHTML = ''; // Clear previous suggestions
+            autocompleteList.style.display = 'none';
+
+            if (inputValue.startsWith(':')) {
+                const currentInput = inputValue.toLowerCase();
+                const suggestions = availableCommands.filter(command =>
+                    command.toLowerCase().startsWith(currentInput) && command.toLowerCase() !== currentInput
+                );
+
+                if (suggestions.length > 0) {
+                    suggestions.forEach(suggestion => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = suggestion;
+                        listItem.classList.add('command-autocomplete-item'); // Add a CSS class for items
+
+                        listItem.addEventListener('click', function() {
+                            searchInput.value = suggestion;
+                            autocompleteList.style.display = 'none';
+                            searchInput.focus();
+                        });
+
+                        autocompleteList.appendChild(listItem);
+                    });
+                    autocompleteList.style.display = 'block';
+                    updateAutocompletePosition(); // Update position if content changes
+                }
+            }
+        });
+
+        searchInput.addEventListener('keydown', function(event) {
+            if (searchInput.value.startsWith(':') && event.key === 'Enter') {
+                event.preventDefault();
+                const command = searchInput.value.trim();
+                handleCommand(command);
+                searchInput.value = '';
+                autocompleteList.style.display = 'none'; // Hide suggestions on command execution
+            } else if (event.key === 'Escape') {
+                autocompleteList.style.display = 'none'; // Hide suggestions on Escape
+            }
+        });
+
+        // Handle clicks outside the autocomplete to close it
+        document.addEventListener('click', function(event) {
+            if (autocompleteList.style.display === 'block' && !event.target.closest('#search-container')) {
+                autocompleteList.style.display = 'none';
+            }
+        });
+    } else {
+        console.error("Search input element with ID 'link-search' not found.");
+    }
+
+    async function handleCommand(command) {
+        if (command.startsWith(':link-delete ')) {
+            const linkNameToDelete = command.substring(':link-delete '.length).trim();
+            if (linkNameToDelete) {
+                const confirmed = confirm(`Are you sure you want to delete the link "${linkNameToDelete}"?`);
+                if (confirmed) {
+                    const linksContainer = document.getElementById('links-container');
+                    linksContainer.querySelectorAll('.links-grid').forEach(async (grid) => {
+                        const categoryName = grid.previousElementSibling?.querySelector('.category-title')?.textContent;
+                        const initialLinkCount = grid.querySelectorAll('.link-item').length;
+                        const updatedLinks = Array.from(grid.querySelectorAll('.link-item'))
+                            .filter(item => item.querySelector('a')?.textContent !== linkNameToDelete)
+                            .map(item => item.querySelector('a')?.textContent);
+
+                        if (updatedLinks.length < initialLinkCount && categoryName) {
+                            const response = await fetch('/api/reorder-links', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ category: categoryName, order: updatedLinks }),
+                            });
+
+                            if (response.ok) {
+                                const result = await response.json();
+                                console.log(result.message);
+                                loadLinks(); // Ensure loadLinks is defined elsewhere
+                            } else {
+                                const errorResult = await response.json();
+                                console.error('Error deleting link:', errorResult.error || response.statusText);
+                                // Optionally provide user feedback
+                            }
+                        }
+                    });
+                }
+            } else {
+                alert('Please specify the name of the link to delete.');
+            }
+        } else if (command.startsWith(':category-delete ')) {
+            const categoryNameToDelete = command.substring(':category-delete '.length).trim();
+            if (categoryNameToDelete) {
+                const confirmed = confirm(`Are you sure you want to delete the category "${categoryNameToDelete}" and all its links?`);
+                if (confirmed) {
+                    const linksContainer = document.getElementById('links-container');
+                    const initialCategoryCount = linksContainer.children.length;
+                    const updatedCategories = Array.from(linksContainer.children)
+                        .filter(categoryDiv => categoryDiv.querySelector('.category-title')?.textContent !== categoryNameToDelete)
+                        .map(categoryDiv => categoryDiv.querySelector('.category-title')?.textContent)
+                        .filter(Boolean); // Filter out null if title is not found
+
+                    if (updatedCategories.length < initialCategoryCount) {
+                        const response = await fetch('/api/reorder-categories', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                },
+                            body: JSON.stringify({ order: updatedCategories }),
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            console.log(result.message);
+                            loadLinks(); // Reload to update UI
+                        } else {
+                            const errorResult = await response.json();
+                            console.error('Error deleting category:', errorResult.error || response.statusText);
+                            // Optionally provide user feedback
+                        }
+                    } else {
+                        alert(`Category "${categoryNameToDelete}" not found.`);
+                    }
+                }
+            } else {
+                alert('Please specify the name of the category to delete.');
+            }
+        } else {
+            // Default search functionality (if any)
+            console.log('Performing search for:', searchInput.value);
+            // You would implement your regular search logic here
+        }
+    }
+
+    // Assume loadLinks and other initialization functions are defined elsewhere.
 });
 
 /* calcuator */
@@ -328,6 +501,8 @@ function initializeDragAndDrop() {
         draggedItem = event.target.closest('.link-item');
         if (!draggedItem) return;
 
+				event.stopPropagation();
+
         draggedItem.classList.add('dragging');
         event.dataTransfer.setData('text/plain', null); // Required for Firefox
     }
@@ -396,4 +571,75 @@ function initializeDragAndDrop() {
         grid.addEventListener('dragover', handleDragOver);
         grid.addEventListener('dragend', handleDragEnd);
     });
+}
+
+/* drag and drop for category */
+document.addEventListener('DOMContentLoaded', function() {
+    const linksContainer = document.getElementById('links-container');
+    let draggedCategory = null;
+
+    function handleCategoryDragStart(event) {
+        draggedCategory = event.target.closest('.category-container');
+        if (!draggedCategory) return;
+
+        draggedCategory.classList.add('dragging-category');
+        event.dataTransfer.setData('text/plain', null); // Required for Firefox
+    }
+
+    function handleCategoryDragOver(event) {
+        event.preventDefault(); // Allow drop
+
+        if (!draggedCategory) return;
+
+        const dropTargetCategory = event.target.closest('.category-container');
+
+        if (dropTargetCategory && draggedCategory !== dropTargetCategory) {
+            const draggedIndex = Array.from(linksContainer.children).indexOf(draggedCategory);
+            const dropIndex = Array.from(linksContainer.children).indexOf(dropTargetCategory);
+
+            if (draggedIndex < dropIndex) {
+                dropTargetCategory.after(draggedCategory);
+            } else {
+                dropTargetCategory.before(draggedCategory);
+            }
+        }
+    }
+
+    function handleCategoryDragEnd(event) {
+        if (!draggedCategory) return;
+        draggedCategory.classList.remove('dragging-category');
+        draggedCategory = null;
+
+        // Optionally send the new category order to the server
+        const newCategoryOrder = Array.from(linksContainer.children).map(container => {
+            const titleElement = container.querySelector('.category-title');
+            return titleElement ? titleElement.textContent : null; // Or a more reliable identifier
+        }).filter(Boolean);
+        sendNewCategoryOrderToServer(newCategoryOrder);
+    }
+
+    linksContainer.addEventListener('dragstart', handleCategoryDragStart);
+    linksContainer.addEventListener('dragover', handleCategoryDragOver);
+    linksContainer.addEventListener('dragend', handleCategoryDragEnd);
+});
+
+function sendNewCategoryOrderToServer(order) {
+    fetch('/api/reorder-categories', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ order: order }),
+    })
+				.then(response => {
+						if (!response.ok) {
+								console.error('Failed to send category order to server:', response.status);
+						} else {
+								console.log('Category order updated on server.');
+								// Optionally reload links to ensure consistency
+						}
+				})
+				.catch(error => {
+						console.error('Error sending category order to server:', error);
+				});
 }
