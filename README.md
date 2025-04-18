@@ -8,6 +8,10 @@ This project is a simple web application that allows users to organize and visua
 * An API to add new links to specific categories.
 * An API to create new categories.
 * An API to reorder links within a category.
+* **Command Mode:** A command-line interface accessible through the search bar (by starting with `:`) allows you to perform actions:
+    * `:link-delete <name>`: Deletes a link with the specified name.
+    * `:category-delete <name>`: Deletes an entire category with the specified name and all its links.
+* **Command Autocomplete:** When typing a command (starting with `:`), the search bar will display a dropdown list of available commands as suggestions.
 
 It's built using Deno, a simple, modern, and secure runtime for JavaScript and TypeScript.
 
@@ -56,3 +60,35 @@ deno --version
 ```bash
 deno run --allow-net --allow-read --allow-write server.ts
 ```
+
+## How to Use
+
+1.  **Organize Links:** Drag individual link items within their categories to rearrange them.
+2.  **Reorder Categories:** Drag entire category sections to change their order on the page.
+3.  **Command Mode:**
+    * Focus on the search bar (you can use the `Escape` key as a shortcut).
+    * Type a command starting with a colon (`:`).
+    * As you type, autocomplete suggestions for available commands will appear below the search bar. You can click on a suggestion to select it.
+    * Type the full command with the necessary parameters (e.g., the name of the link or category to delete).
+    * Press `Enter` to execute the command.
+4.  **Search:** (Placeholder - implement your search functionality in the `else` block of the `handleCommand` function in `main.js`).
+5.  **Clear Search Bar:** Use `Alt + Backspace` to quickly clear the content of the search bar.
+6.  **Focus Search Bar:** Press the `Escape` key to quickly focus on the search bar.
+
+## Technical Details
+
+* **HTML:** Structure of the page with categories and links.
+* **CSS (`style.css`):** Styling of the layout, categories, links, search bar, and autocomplete suggestions.
+* **JavaScript (`main.js`):** Handles the interactive features:
+    * Drag and drop functionality using the HTML5 Drag and Drop API.
+    * Event listeners for the search bar to enable command mode and autocomplete.
+    * `fetch` API to communicate with the server for actions like deleting and reordering links/categories.
+* **Server (Deno):** A simple Deno server (`server.ts`) manages the `links.json` file, providing and updating the link data.
+
+## Server Endpoints Used
+
+* `/api/links` (GET): Retrieves the initial link data.
+* `/api/links` (POST): Adds a new link to a category.
+* `/api/categories` (POST): Adds a new category.
+* `/api/reorder-links` (POST): Updates the order of links within a category (also used for deleting links by sending the updated list without the deleted link).
+* `/api/reorder-categories` (POST): Updates the order of categories (also used for deleting categories by sending the updated list without the deleted category).
