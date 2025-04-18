@@ -1,5 +1,7 @@
 # Simple Link Visualizer App
 
+![startpage screenshot](startpage.png "startpage")
+
 This project is a simple web application that allows users to organize and visualize their favorite links. It features:
 
 * Displaying links categorized by topic.
