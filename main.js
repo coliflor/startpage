@@ -199,6 +199,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('link-search');
     const searchContainer = document.getElementById('search-container');
     const autocompleteList = document.createElement('ul');
+    const formsContainers = document.querySelectorAll('#forms-container');
+    const toggleFormsButton = document.getElementById('toggle-forms-button');
 
     if (!searchContainer) {
         console.error("Search container element with ID 'search-container' not found.");
@@ -209,78 +211,126 @@ document.addEventListener('DOMContentLoaded', function() {
     autocompleteList.classList.add('command-autocomplete-list');
     autocompleteList.style.position = 'absolute';
     autocompleteList.style.zIndex = '1001';
-    autocompleteList.style.display = 'none'; // Initially hidden
-    searchContainer.style.position = 'relative'; // Ensure search container is positioned for absolute child
+    autocompleteList.style.display = 'none';
+    searchContainer.style.position = 'relative';
     searchContainer.appendChild(autocompleteList);
 
-    // Position the autocomplete list relative to the search input
     function updateAutocompletePosition() {
         if (searchInput && autocompleteList && searchContainer) {
             const inputRect = searchInput.getBoundingClientRect();
             const containerRect = searchContainer.getBoundingClientRect();
-
             autocompleteList.style.top = `${inputRect.bottom - containerRect.top + window.scrollY}px`;
             autocompleteList.style.left = `${inputRect.left - containerRect.left + window.scrollX}px`;
-            autocompleteList.style.width = `${inputRect.width}px`; // Match input width
+            autocompleteList.style.width = `${inputRect.width}px`;
         }
     }
 
-    // Update position on initial load and window resize
     updateAutocompletePosition();
     window.addEventListener('resize', updateAutocompletePosition);
 
     const availableCommands = [
         ':link-delete ',
-        ':category-delete '
-        // Add more commands here as you implement them
+        ':category-delete ',
+        ':open ',
+        ':open-new-tab ',
+        ':toggle-forms'
     ];
 
+		function populateAutocomplete(suggestions) {
+        autocompleteList.innerHTML = '';
+        if (suggestions.length > 0) {
+            suggestions.forEach((suggestion, index) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = suggestion;
+                listItem.classList.add('command-autocomplete-item');
+                listItem.dataset.index = index; // Store index for tracking
+                listItem.addEventListener('click', function() {
+                    searchInput.value = suggestion;
+                    autocompleteList.style.display = 'none';
+                    autocompleteIndex = -1; // Reset selection
+                    searchInput.focus();
+                });
+                autocompleteList.appendChild(listItem);
+            });
+            autocompleteList.style.display = 'block';
+            updateAutocompletePosition();
+            autocompleteIndex = -1;
+        } else {
+            autocompleteList.style.display = 'none';
+            autocompleteIndex = -1;
+        }
+    }
+
+
     if (searchInput) {
-        // Keybind to select the search bar (Escape)
-        document.addEventListener('keydown', function(event) {
+				searchInput.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 event.preventDefault();
                 searchInput.focus();
+                autocompleteList.style.display = 'none';
+                autocompleteIndex = -1;
             }
-        });
-
-        // Keybind to delete the content of the search bar (Alt + Backspace)
-        document.addEventListener('keydown', function(event) {
             if (event.altKey && event.key === 'Backspace') {
                 event.preventDefault();
+                searchInput.value = '';
+                autocompleteList.style.display = 'none';
+                autocompleteIndex = -1;
+            }
+
+            if (autocompleteList.style.display === 'block') {
+                const items = autocompleteList.querySelectorAll('.command-autocomplete-item');
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    if (autocompleteIndex < items.length - 1) {
+                        autocompleteIndex++;
+                    }
+                    updateAutocompleteSelection(items);
+                    if (autocompleteIndex !== -1) {
+                        searchInput.value = items[autocompleteIndex].textContent;
+                    }
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    if (autocompleteIndex > 0) {
+                        autocompleteIndex--;
+                    }
+                    updateAutocompleteSelection(items);
+                    if (autocompleteIndex !== -1) {
+                        searchInput.value = items[autocompleteIndex].textContent;
+                    }
+                } else if (event.key === 'Enter' && autocompleteIndex !== -1 && items.length > 0) {
+                    event.preventDefault();
+                    searchInput.value = items[autocompleteIndex].textContent;
+                    autocompleteList.style.display = 'none';
+                    autocompleteIndex = -1;
+                    handleCommand(searchInput.value);
+                    searchInput.value = '';
+                }
+            } else if (searchInput.value.startsWith(':') && event.key === 'Enter') {
+                event.preventDefault();
+                const command = searchInput.value.trim();
+                handleCommand(command);
                 searchInput.value = '';
             }
         });
 
-        // Command mode functionality and autocomplete
         searchInput.addEventListener('input', function() {
             const inputValue = searchInput.value.trim();
-            autocompleteList.innerHTML = ''; // Clear previous suggestions
-            autocompleteList.style.display = 'none';
-
             if (inputValue.startsWith(':')) {
                 const currentInput = inputValue.toLowerCase();
                 const suggestions = availableCommands.filter(command =>
                     command.toLowerCase().startsWith(currentInput) && command.toLowerCase() !== currentInput
                 );
+                populateAutocomplete(suggestions);
+            } else {
+                autocompleteList.style.display = 'none';
+                autocompleteIndex = -1;
+            }
+        });
 
-                if (suggestions.length > 0) {
-                    suggestions.forEach(suggestion => {
-                        const listItem = document.createElement('li');
-                        listItem.textContent = suggestion;
-                        listItem.classList.add('command-autocomplete-item'); // Add a CSS class for items
-
-                        listItem.addEventListener('click', function() {
-                            searchInput.value = suggestion;
-                            autocompleteList.style.display = 'none';
-                            searchInput.focus();
-                        });
-
-                        autocompleteList.appendChild(listItem);
-                    });
-                    autocompleteList.style.display = 'block';
-                    updateAutocompletePosition(); // Update position if content changes
-                }
+        document.addEventListener('click', function(event) {
+            if (autocompleteList.style.display === 'block' && !event.target.closest('#search-container')) {
+                autocompleteList.style.display = 'none';
+                autocompleteIndex = -1;
             }
         });
 
@@ -290,13 +340,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const command = searchInput.value.trim();
                 handleCommand(command);
                 searchInput.value = '';
-                autocompleteList.style.display = 'none'; // Hide suggestions on command execution
+                autocompleteList.style.display = 'none';
             } else if (event.key === 'Escape') {
-                autocompleteList.style.display = 'none'; // Hide suggestions on Escape
+                autocompleteList.style.display = 'none';
             }
         });
 
-        // Handle clicks outside the autocomplete to close it
         document.addEventListener('click', function(event) {
             if (autocompleteList.style.display === 'block' && !event.target.closest('#search-container')) {
                 autocompleteList.style.display = 'none';
@@ -304,6 +353,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     } else {
         console.error("Search input element with ID 'link-search' not found.");
+    }
+
+		function updateAutocompleteSelection(items) {
+        items.forEach((item, index) => {
+            if (index === autocompleteIndex) {
+                item.classList.add('autocomplete-selected');
+                item.scrollIntoView({ block: 'nearest' }); // Keep selected item in view
+            } else {
+                item.classList.remove('autocomplete-selected');
+            }
+        });
     }
 
     async function handleCommand(command) {
@@ -317,8 +377,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         const categoryName = grid.previousElementSibling?.querySelector('.category-title')?.textContent;
                         const initialLinkCount = grid.querySelectorAll('.link-item').length;
                         const updatedLinks = Array.from(grid.querySelectorAll('.link-item'))
-                            .filter(item => item.querySelector('a')?.textContent !== linkNameToDelete)
-                            .map(item => item.querySelector('a')?.textContent);
+															.filter(item => item.querySelector('a')?.textContent !== linkNameToDelete)
+															.map(item => item.querySelector('a')?.textContent);
 
                         if (updatedLinks.length < initialLinkCount && categoryName) {
                             const response = await fetch('/api/reorder-links', {
@@ -352,16 +412,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     const linksContainer = document.getElementById('links-container');
                     const initialCategoryCount = linksContainer.children.length;
                     const updatedCategories = Array.from(linksContainer.children)
-                        .filter(categoryDiv => categoryDiv.querySelector('.category-title')?.textContent !== categoryNameToDelete)
-                        .map(categoryDiv => categoryDiv.querySelector('.category-title')?.textContent)
-                        .filter(Boolean); // Filter out null if title is not found
+													.filter(categoryDiv => categoryDiv.querySelector('.category-title')?.textContent !== categoryNameToDelete)
+													.map(categoryDiv => categoryDiv.querySelector('.category-title')?.textContent)
+													.filter(Boolean); // Filter out null if title is not found
 
                     if (updatedCategories.length < initialCategoryCount) {
                         const response = await fetch('/api/reorder-categories', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                },
+                            },
                             body: JSON.stringify({ order: updatedCategories }),
                         });
 
@@ -381,6 +441,39 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 alert('Please specify the name of the category to delete.');
             }
+        } else if (command.startsWith(':open ')) {
+            const linkNameToOpen = command.substring(':open '.length).trim();
+            if (linkNameToOpen) {
+                const linkElement = findLinkElementByName(linkNameToOpen);
+                if (linkElement) {
+                    window.location.href = linkElement.href;
+                } else {
+                    alert(`Link "${linkNameToOpen}" not found.`);
+                }
+            } else {
+                alert('Please specify the name of the link to open.');
+            }
+        } else if (command.startsWith(':open-new-tab ')) {
+            const linkNameToOpenNewTab = command.substring(':open-new-tab '.length).trim();
+            if (linkNameToOpenNewTab) {
+                const linkElement = findLinkElementByName(linkNameToOpenNewTab);
+                if (linkElement) {
+                    window.open(linkElement.href, '_blank');
+                } else {
+                    alert(`Link "${linkNameToOpenNewTab}" not found.`);
+                }
+            } else {
+                alert('Please specify the name of the link to open in a new tab.');
+            }
+        } else if (command === ':toggle-forms') {
+            formsContainers.forEach(container => {
+                container.classList.toggle('hidden');
+            });
+            if (formsContainers[0].classList.contains('hidden')) {
+                toggleFormsButton.textContent = 'Show';
+            } else {
+                toggleFormsButton.textContent = 'Hide';
+            }
         } else {
             // Default search functionality (if any)
             console.log('Performing search for:', searchInput.value);
@@ -388,7 +481,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Assume loadLinks and other initialization functions are defined elsewhere.
+    function findLinkElementByName(name) {
+        const linkElements = document.querySelectorAll('.link-item a');
+        for (const link of linkElements) {
+            if (link.textContent.trim() === name) {
+                return link;
+            }
+        }
+        return null;
+    }
+
+    function findCategoryElementByName(name) {
+        const categoryElements = document.querySelectorAll('.category-container');
+        for (const category of categoryElements) {
+            const titleElement = category.querySelector('.category-title');
+            if (titleElement && titleElement.textContent.trim() === name) {
+                return category;
+            }
+        }
+        return null;
+    }
 });
 
 /* calcuator */

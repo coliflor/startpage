@@ -276,6 +276,11 @@ h1 {
 }
 
 /* Style for the autocomplete list container */
+.command-autocomplete-item.autocomplete-selected {
+    background-color: #ff9881;
+    color: white;
+}
+
 .command-autocomplete-list {
 		padding: 8px;
 		border: 1px solid black;
