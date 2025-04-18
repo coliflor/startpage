@@ -173,19 +173,24 @@ document.addEventListener("DOMContentLoaded", function() {
 
 /* forms */
 document.addEventListener('DOMContentLoaded', function() {
-		const formsContainers = document.querySelectorAll('#forms-container');
-		const toggleFormsButton = document.getElementById('toggle-forms-button');
+    const formsContainers = document.querySelectorAll('#forms-container');
+    const toggleFormsButton = document.getElementById('toggle-forms-button');
 
-		toggleFormsButton.addEventListener('click', function() {
-				formsContainers.forEach(container => {
-						container.classList.toggle('hidden');
-						if (formsContainers[0].classList.contains('hidden')) {
-								toggleFormsButton.textContent = 'Show';
-						} else {
-								toggleFormsButton.textContent = 'Hide';
-						}
-				});
-		});
+    const initiallyHidden = formsContainers[0].classList.contains('hidden');
+    toggleFormsButton.textContent = initiallyHidden ? 'Hide' : 'Show';
+
+    toggleFormsButton.addEventListener('click', function() {
+        formsContainers.forEach(container => {
+            container.classList.toggle('hidden');
+        });
+
+        // Toggle the button text based on its *current* text
+        if (toggleFormsButton.textContent === 'Show') {
+            toggleFormsButton.textContent = 'Hide';
+        } else {
+            toggleFormsButton.textContent = 'Show';
+        }
+    });
 });
 
 /* Search bar keybinds */

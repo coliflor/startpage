@@ -1,4 +1,4 @@
-# Simple Link Sharing App
+# Simple Link Visualizer App
 
 This project is a simple web application that allows users to organize and visualize their favorite links. It features:
 
