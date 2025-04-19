@@ -199,36 +199,48 @@ async function handler(request: Request): Promise<Response> {
 						return new Response("Error processing the request.", { status: 500 });
 				}
 		} else if (url.pathname === "/api/reorder-categories" && request.method === "POST") {
-        try {
-            const body = await request.json();
-            if (body && Array.isArray(body.order)) {
-                const { order } = body;
-                const linksData = await readLinks();
-                const orderedCategories: Category[] = [];
-                const existingCategoriesMap = new Map(linksData.categories.map(cat => [cat.name, cat]));
+				try {
+						const body = await request.json();
+						if (body && Array.isArray(body.order)) {
+								const { order } = body;
+								const linksData = await readLinks();
 
-                for (const categoryName of order) {
-                    const foundCategory = existingCategoriesMap.get(categoryName);
-                    if (foundCategory) {
-                        orderedCategories.push(foundCategory);
-                    }
-                }
+								// Assuming the client-side sends { order: [...], oldName: "...", newName: "..." }
+								const oldName = body.oldName;
+								const newName = body.newName;
 
-                linksData.categories = orderedCategories;
-                await writeLinks(linksData.categories);
+								// Update the category name in the server data
+								if (oldName && newName) {
+										linksData.categories = linksData.categories.map(cat =>
+												cat.name === oldName ? { ...cat, name: newName } : cat
+										);
+								}
 
-                return new Response(JSON.stringify({ message: "Categories reordered successfully." }), {
-                    status: 200,
-                    headers: { "Content-Type": "application/json" },
-                });
-            } else {
-                return new Response("Invalid request body. Missing 'order' array.", { status: 400 });
-            }
-        } catch (error) {
-            console.error("Error processing POST request for /api/reorder-categories:", error);
-            return new Response("Error processing the request.", { status: 500 });
-        }
-    } else {
+								const orderedCategories: Category[] = [];
+								const existingCategoriesMap = new Map(linksData.categories.map(cat => [cat.name, cat]));
+
+								for (const categoryName of order) {
+										const foundCategory = existingCategoriesMap.get(categoryName);
+										if (foundCategory) {
+												orderedCategories.push(foundCategory);
+										}
+								}
+
+								linksData.categories = orderedCategories;
+								await writeLinks(linksData.categories);
+
+								return new Response(JSON.stringify({ message: "Categories reordered successfully." }), {
+										status: 200,
+										headers: { "Content-Type": "application/json" },
+								});
+						} else {
+								return new Response("Invalid request body. Missing 'order' array.", { status: 400 });
+						}
+				} catch (error) {
+						console.error("Error reordering categories:", error);
+						return new Response(JSON.stringify({ error: "Failed to reorder categories." }), { status: 500, headers: { "Content-Type": "application/json" } });
+				}
+		}else {
 				return new Response("Not found.", { status: 404 });
 		}
 }

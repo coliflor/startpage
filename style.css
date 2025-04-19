@@ -25,6 +25,7 @@ h1 {
     margin-bottom: 5px;
     width: 100%;
 		z-index: 1;
+		justify-content: center;
 }
 .square-section {
 		width: 200px;
@@ -188,6 +189,14 @@ h1 {
 .highlight-link { font-weight: bold; color: darkblue; }
 
 /* forms */
+#forms {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+    width: 100%;
+		z-index: 1;
+		justify-content: center;
+}
 #forms-container {
 		float: left;
 		margin-top: 15px;

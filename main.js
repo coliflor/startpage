@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleFormsButton = document.getElementById('toggle-forms-button');
 
     const initiallyHidden = formsContainers[0].classList.contains('hidden');
-    toggleFormsButton.textContent = initiallyHidden ? 'Hide' : 'Show';
+    toggleFormsButton.textContent = initiallyHidden ? 'Show' : 'Hide';
 
     toggleFormsButton.addEventListener('click', function() {
         formsContainers.forEach(container => {
@@ -233,7 +233,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ':category-delete ',
         ':open ',
         ':open-new-tab ',
-        ':toggle-forms'
+        ':toggle-forms',
+				':open-category ',
+				':category-rename '
     ];
 
 		function populateAutocomplete(suggestions) {
@@ -441,6 +443,19 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 alert('Please specify the name of the category to delete.');
             }
+        } else if (command.startsWith(':category-rename ')) {
+            const parts = command.substring(':category-rename '.length).trim().split(' ');
+            if (parts.length >= 2) {
+                const oldCategoryName = parts[0];
+                const newCategoryName = parts.slice(1).join(' ');
+                if (oldCategoryName && newCategoryName) {
+                    renameCategory(oldCategoryName, newCategoryName);
+                } else {
+                    alert('Please specify the old and new category names.');
+                }
+            } else {
+                alert('Please specify the old and new category names (e.g., :category-rename Old Name New Name).');
+            }
         } else if (command.startsWith(':open ')) {
             const linkNameToOpen = command.substring(':open '.length).trim();
             if (linkNameToOpen) {
@@ -474,6 +489,13 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 toggleFormsButton.textContent = 'Hide';
             }
+        } else if (command.startsWith(':open-category ')) {
+            const categoryNameToOpen = command.substring(':open-category '.length).trim();
+            if (categoryNameToOpen) {
+                openAllLinksInCategory(categoryNameToOpen);
+            } else {
+                alert('Please specify the name of the category to open.');
+            }
         } else {
             // Default search functionality (if any)
             console.log('Performing search for:', searchInput.value);
@@ -500,6 +522,63 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         return null;
+    }
+
+    function openAllLinksInCategory(categoryName) {
+        const categoryElement = findCategoryElementByName(categoryName);
+        if (categoryElement) {
+            const linksInCategory = categoryElement.querySelectorAll('.link-item a');
+            if (linksInCategory.length > 0) {
+                linksInCategory.forEach(link => {
+                    window.open(link.href, '_blank');
+                });
+            } else {
+                alert(`Category "${categoryName}" has no links to open.`);
+            }
+        } else {
+            alert(`Category "${categoryName}" not found.`);
+        }
+    }
+
+		async function renameCategory(oldCategoryName, newCategoryName) {
+        const linksContainer = document.getElementById('links-container');
+        const categoryElements = Array.from(linksContainer.children);
+        let found = false;
+
+        const updatedCategories = categoryElements.map(categoryDiv => {
+            const titleElement = categoryDiv.querySelector('.category-title');
+            if (titleElement && titleElement.textContent.trim() === oldCategoryName) {
+                found = true;
+                return newCategoryName;
+            }
+            return titleElement?.textContent?.trim();
+        }).filter(Boolean);
+
+        if (found) {
+            const response = await fetch('/api/reorder-categories', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    order: updatedCategories,
+                    oldName: oldCategoryName,
+                    newName: newCategoryName,
+                }),
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log(result.message);
+                loadLinks(); // Call loadLinks() to refresh the UI
+            } else {
+                const errorResult = await response.json();
+                console.error('Error renaming category:', errorResult.error || response.statusText);
+                alert(`Failed to rename category.`);
+            }
+        } else {
+            alert(`Category "${oldCategoryName}" not found.`);
+        }
     }
 });
 

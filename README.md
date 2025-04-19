@@ -8,7 +8,7 @@ This project is a simple web application that allows users to organize and visua
 * An API to add new links to specific categories.
 * An API to create new categories.
 * An API to reorder links within a category.
-**Command Mode:** A command-line interface accessible through the search bar (by starting with `:`) allows you to perform actions:
+* **Command Mode:** A command-line interface accessible through the search bar (by starting with `:`) allows you to perform actions:
     * `:link-delete <name>`: Deletes a link with the specified name.
     * `:category-delete <name>`: Deletes an entire category with the specified name and all its links.
     * `:open <name>`: Opens the link with the specified name in the current tab.
