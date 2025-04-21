@@ -16,6 +16,7 @@ This project is a simple web application that allows users to organize and visua
 	* `:toggle-forms ` : Toggle open the forms.
 	* `:open-category <name>`: Opens all links in a given category.
 	* `:category-rename <name> `: Renames a given category.
+	* `:link-move-category <name> <category> `: Move a link to another category.
 * **Command Autocomplete:** When typing a command (starting with `:`), the search bar will display a dropdown list of available commands as suggestions.
 
 It's built using Deno, a simple, modern, and secure runtime for JavaScript and TypeScript.

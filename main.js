@@ -767,15 +767,20 @@ function resetCalculator() {
 function initializeDragAndDrop() {
     const linksGrids = document.querySelectorAll('.links-grid');
     let draggedItem = null;
+    let sourceCategoryName = null;
 
     function handleDragStart(event) {
         draggedItem = event.target.closest('.link-item');
         if (!draggedItem) return;
 
-				event.stopPropagation();
+        event.stopPropagation();
 
         draggedItem.classList.add('dragging');
-        event.dataTransfer.setData('text/plain', null); // Required for Firefox
+        event.dataTransfer.setData('text/plain', JSON.stringify({
+            linkName: draggedItem.querySelector('a').textContent,
+            sourceCategory: draggedItem.dataset.category
+        }));
+        sourceCategoryName = draggedItem.dataset.category;
     }
 
     function handleDragOver(event) {
@@ -783,64 +788,94 @@ function initializeDragAndDrop() {
         if (!draggedItem) return;
 
         const dropTarget = event.target.closest('.link-item');
-        const currentLinksGrid = draggedItem.closest('.links-grid');
-        const dropTargetLinksGrid = dropTarget ? dropTarget.closest('.links-grid') : null;
+        const dropTargetLinksGrid = dropTarget ? dropTarget.closest('.links-grid') : event.target.closest('.links-grid');
 
-        if (dropTarget && currentLinksGrid === dropTargetLinksGrid && draggedItem !== dropTarget) {
-            const draggedIndex = Array.from(currentLinksGrid.children).indexOf(draggedItem);
-            const dropIndex = Array.from(currentLinksGrid.children).indexOf(dropTarget);
-
-            if (draggedIndex < dropIndex) {
-                dropTarget.after(draggedItem);
-            } else {
+        // Allow dragging over any .links-grid
+        if (dropTargetLinksGrid) {
+            if (dropTarget) {
                 dropTarget.before(draggedItem);
+            } else if (event.target.classList.contains('links-grid')) {
+                event.target.appendChild(draggedItem);
             }
         }
     }
 
-		function handleDragEnd(event) {
-				if (!draggedItem) return;
-				draggedItem.classList.remove('dragging');
+    function handleDragEnd(event) {
+        if (!draggedItem) return;
+        draggedItem.classList.remove('dragging');
 
-				const currentLinksGrid = draggedItem.closest('.links-grid');
-				const categoryName = draggedItem.dataset.category;
-				if (currentLinksGrid && categoryName) {
-						const linkItemsInCategory = currentLinksGrid.querySelectorAll(`[data-category="${categoryName}"]`);
-						const newOrder = Array.from(linkItemsInCategory).map(item => {
-								return item.querySelector('a').textContent; // Send the link name
-						});
+        const destinationLinksGrid = draggedItem.closest('.links-grid');
+        const destinationCategoryName = destinationLinksGrid ? destinationLinksGrid.previousElementSibling?.querySelector('.category-title')?.textContent : null;
+        const linkNameToMove = draggedItem.querySelector('a').textContent;
 
-						sendNewOrderToServer(categoryName, newOrder);
-				}
+        if (sourceCategoryName && destinationCategoryName && sourceCategoryName !== destinationCategoryName) {
+            // Move to a different category
+            moveLinkToCategory(linkNameToMove, sourceCategoryName, destinationCategoryName);
+        } else if (sourceCategoryName === destinationCategoryName && destinationCategoryName) {
+            // Moved within the same category, update order
+            const newOrder = Array.from(destinationLinksGrid.querySelectorAll('.link-item a'))
+                .map(a => a.textContent);
+            sendNewOrderToServer(destinationCategoryName, newOrder);
+        }
 
-				draggedItem = null;
-		}
+        draggedItem = null;
+        sourceCategoryName = null;
+    }
 
-		function sendNewOrderToServer(category, order) {
-				fetch('/api/reorder-links', {
-						method: 'POST',
-						headers: {
-								'Content-Type': 'application/json',
-						},
-						body: JSON.stringify({ category: category, order: order }),
-				})
-						.then(response => {
-								if (!response.ok) {
-										console.error('Failed to send link order to server:', response.status);
-								} else {
-										console.log('Link order updated on server.');
-										// Optionally reload links to ensure consistency
-								}
-						})
-						.catch(error => {
-								console.error('Error sending link order to server:', error);
-						});
-		}
+    async function moveLinkToCategory(linkNameToMove, sourceCategory, targetCategory) {
+        const response = await fetch('/api/move-link', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                linkName: linkNameToMove,
+                sourceCategory: sourceCategory,
+                targetCategory: targetCategory,
+            }),
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log(result.message);
+            loadLinks(); // Reload to update the UI
+        } else {
+            const errorResult = await response.json();
+            console.error('Error moving link:', errorResult.error || response.statusText);
+            alert(`Failed to move link "${linkNameToMove}" to "${targetCategory}".`);
+        }
+    }
+
+    function sendNewOrderToServer(category, order) {
+        fetch('/api/reorder-links', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ category: category, order: order }),
+        })
+            .then(response => {
+                if (!response.ok) {
+                    console.error('Failed to send link order to server:', response.status);
+                } else {
+                    console.log('Link order updated on server.');
+                    // Optionally reload links to ensure consistency
+                }
+            })
+            .catch(error => {
+                console.error('Error sending link order to server:', error);
+            });
+    }
 
     linksGrids.forEach(grid => {
         grid.addEventListener('dragstart', handleDragStart);
         grid.addEventListener('dragover', handleDragOver);
         grid.addEventListener('dragend', handleDragEnd);
+    });
+
+    // Make individual link items draggable
+    document.querySelectorAll('.link-item').forEach(item => {
+        item.setAttribute('draggable', 'true');
     });
 }
 
