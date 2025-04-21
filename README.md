@@ -99,3 +99,4 @@ deno run --allow-net --allow-read --allow-write server.ts
 * `/api/categories` (POST): Adds a new category.
 * `/api/reorder-links` (POST): Updates the order of links within a category (also used for deleting links by sending the updated list without the deleted link).
 * `/api/reorder-categories` (POST): Updates the order of categories (also used for deleting categories by sending the updated list without the deleted category).
+* `/api/move-link` (POST): Moves a link from one category to another. Expects a JSON body with `linkName`, `sourceCategory`, and `targetCategory`.

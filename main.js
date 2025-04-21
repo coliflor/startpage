@@ -238,7 +238,8 @@ document.addEventListener('DOMContentLoaded', function() {
 				':open-category ',
 				':category-rename ',
 				':google ',
-        ':wikipedia '
+        ':wikipedia ',
+				':export-links'
     ];
 
 		function populateAutocomplete(suggestions) {
@@ -526,6 +527,8 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 alert('Please enter a search query for Wikipedia.');
             }
+        } else if (command.startsWith(':export-links')) {
+            exportLinksAsJSON();
         } else {
             // Default search functionality (if any)
             console.log('Performing search for:', searchInput.value);
@@ -660,6 +663,36 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+		async function exportLinksAsJSON() {
+        try {
+            const response = await fetch('/api/links'); // Assuming /api/links returns the full JSON data
+            if (!response.ok) {
+                console.error('Failed to fetch links for export:', response.status);
+                alert('Failed to export links.');
+                return;
+            }
+            const jsonData = await response.json();
+            const jsonString = JSON.stringify(jsonData, null, 2);
+            const filename = 'my-links.json';
+            const blob = new Blob([jsonString], { type: 'application/json' });
+
+            // Create a temporary link element to trigger the download
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+
+            alert(`Links exported to ${filename}`);
+
+        } catch (error) {
+            console.error('Error exporting links:', error);
+            alert('Failed to export links.');
+        }
+    }
+
 });
 
 /* calcuator */
@@ -783,15 +816,30 @@ function initializeDragAndDrop() {
         sourceCategoryName = draggedItem.dataset.category;
     }
 
-    function handleDragOver(event) {
+		function handleDragOver(event) {
         event.preventDefault(); // Allow drop
         if (!draggedItem) return;
 
         const dropTarget = event.target.closest('.link-item');
+        const currentLinksGrid = draggedItem.closest('.links-grid');
         const dropTargetLinksGrid = dropTarget ? dropTarget.closest('.links-grid') : event.target.closest('.links-grid');
 
-        // Allow dragging over any .links-grid
-        if (dropTargetLinksGrid) {
+        // Only reorder if the drop target is a link item within the same grid
+        if (dropTarget && currentLinksGrid === dropTargetLinksGrid && draggedItem !== dropTarget) {
+            const draggedIndex = Array.from(currentLinksGrid.children).indexOf(draggedItem);
+            const dropIndex = Array.from(currentLinksGrid.children).indexOf(dropTarget);
+
+            // Prevent unnecessary DOM manipulation if the position hasn't changed
+            if ((draggedIndex < dropIndex && dropTarget.nextElementSibling !== draggedItem) ||
+                (draggedIndex > dropIndex && dropTarget.previousElementSibling !== draggedItem)) {
+                if (draggedIndex < dropIndex) {
+                    dropTarget.after(draggedItem);
+                } else {
+                    dropTarget.before(draggedItem);
+                }
+            }
+        } else if (dropTargetLinksGrid && dropTargetLinksGrid !== currentLinksGrid) {
+            // Allow moving to a different grid (category)
             if (dropTarget) {
                 dropTarget.before(draggedItem);
             } else if (event.target.classList.contains('links-grid')) {
@@ -814,7 +862,7 @@ function initializeDragAndDrop() {
         } else if (sourceCategoryName === destinationCategoryName && destinationCategoryName) {
             // Moved within the same category, update order
             const newOrder = Array.from(destinationLinksGrid.querySelectorAll('.link-item a'))
-                .map(a => a.textContent);
+									.map(a => a.textContent);
             sendNewOrderToServer(destinationCategoryName, newOrder);
         }
 
