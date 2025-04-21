@@ -230,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const availableCommands = [
         ':link-delete ',
+				':link-move-category ',
         ':category-delete ',
         ':open ',
         ':open-new-tab ',
@@ -407,6 +408,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 alert('Please specify the name of the link to delete.');
+            }
+        } else if (command.startsWith(':link-move-category ')) {
+            const parts = command.substring(':link-move-category '.length).trim().split(' ');
+            if (parts.length >= 2) {
+                const linkNameToMove = parts[0];
+                const targetCategoryName = parts.slice(1).join(' ');
+                if (linkNameToMove && targetCategoryName) {
+                    moveLinkToCategory(linkNameToMove, targetCategoryName);
+                } else {
+                    alert('Please specify the link name and the target category.');
+                }
+            } else {
+                alert('Usage: :link-move-category <link name> <category name>');
             }
         } else if (command.startsWith(':category-delete ')) {
             const categoryNameToDelete = command.substring(':category-delete '.length).trim();
@@ -596,6 +610,56 @@ document.addEventListener('DOMContentLoaded', function() {
             alert(`Category "${oldCategoryName}" not found.`);
         }
     }
+
+		async function moveLinkToCategory(linkNameToMove, targetCategoryName) {
+        const linksContainer = document.getElementById('links-container');
+        let sourceCategoryElement = null;
+        let sourceCategoryName = null;
+
+        // Find the link and its current category
+        for (const categoryDiv of linksContainer.children) {
+            const categoryTitleElement = categoryDiv.querySelector('.category-title');
+            const linksGrid = categoryDiv.querySelector('.links-grid');
+            if (categoryTitleElement && linksGrid) {
+                const currentCategoryName = categoryTitleElement.textContent.trim();
+                const linkElement = Array.from(linksGrid.querySelectorAll('.link-item a'))
+											.find(a => a.textContent.trim() === linkNameToMove);
+
+                if (linkElement) {
+                    sourceCategoryElement = categoryDiv;
+                    sourceCategoryName = currentCategoryName;
+                    break;
+                }
+            }
+        }
+
+        if (sourceCategoryElement && sourceCategoryName) {
+            const response = await fetch('/api/move-link', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    linkName: linkNameToMove,
+                    sourceCategory: sourceCategoryName,
+                    targetCategory: targetCategoryName,
+                }),
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log(result.message);
+                loadLinks(); // Reload to update the UI
+            } else {
+                const errorResult = await response.json();
+                console.error('Error moving link:', errorResult.error || response.statusText);
+                alert(`Failed to move link "${linkNameToMove}" to "${targetCategoryName}".`);
+            }
+        } else {
+            alert(`Link "${linkNameToMove}" not found.`);
+        }
+    }
+
 });
 
 /* calcuator */

@@ -240,7 +240,61 @@ async function handler(request: Request): Promise<Response> {
 						console.error("Error reordering categories:", error);
 						return new Response(JSON.stringify({ error: "Failed to reorder categories." }), { status: 500, headers: { "Content-Type": "application/json" } });
 				}
-		}else {
+		} else if (url.pathname === "/api/move-link" && request.method === "POST") {
+				try {
+						const body = await request.json();
+						if (body && body.linkName && body.sourceCategory && body.targetCategory) {
+								const { linkName, sourceCategory, targetCategory } = body;
+								const linksData = await readLinks();
+
+								let movedLink = null;
+								let sourceCategoryIndex = -1;
+								let targetCategoryIndex = -1;
+
+								// Find the link in the source category and store its data
+								linksData.categories = linksData.categories.map((cat, index) => {
+										if (cat.name === sourceCategory) {
+												sourceCategoryIndex = index;
+												cat.links = cat.links.filter(link => {
+														if (link.name === linkName) {
+																movedLink = link;
+																return false; // Remove the link from the source category
+														}
+														return true;
+												});
+										} else if (cat.name === targetCategory) {
+												targetCategoryIndex = index;
+										}
+										return cat;
+								});
+
+								// Add the link to the target category if found
+								if (movedLink && targetCategoryIndex !== -1) {
+										linksData.categories[targetCategoryIndex].links.push(movedLink);
+										await writeLinks(linksData.categories);
+										return new Response(JSON.stringify({ message: `Link "${linkName}" moved to "${targetCategory}".` }), {
+												status: 200,
+												headers: { "Content-Type": "application/json" },
+										});
+								} else if (!movedLink) {
+										return new Response(JSON.stringify({ error: `Link "${linkName}" not found in category "${sourceCategory}".` }), {
+												status: 404,
+												headers: { "Content-Type": "application/json" },
+										});
+								} else {
+										return new Response(JSON.stringify({ error: `Target category "${targetCategory}" not found.` }), {
+												status: 404,
+												headers: { "Content-Type": "application/json" },
+										});
+								}
+						} else {
+								return new Response("Invalid request body. Missing 'linkName', 'sourceCategory', or 'targetCategory'.", { status: 400 });
+						}
+				} catch (error) {
+						console.error("Error moving link:", error);
+						return new Response(JSON.stringify({ error: "Failed to move link." }), { status: 500, headers: { "Content-Type": "application/json" } });
+				}
+		} else {
 				return new Response("Not found.", { status: 404 });
 		}
 }
