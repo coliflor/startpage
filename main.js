@@ -235,7 +235,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ':open-new-tab ',
         ':toggle-forms',
 				':open-category ',
-				':category-rename '
+				':category-rename ',
+				':google ',
+        ':wikipedia '
     ];
 
 		function populateAutocomplete(suggestions) {
@@ -495,6 +497,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 openAllLinksInCategory(categoryNameToOpen);
             } else {
                 alert('Please specify the name of the category to open.');
+            }
+        } else if (command.startsWith(':google ')) {
+            const query = command.substring(':google '.length).trim();
+            if (query) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+            } else {
+                alert('Please enter a search query for Google.');
+            }
+        } else if (command.startsWith(':wikipedia ')) {
+            const query = command.substring(':wikipedia '.length).trim();
+            if (query) {
+                window.open(`https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(query)}`, '_blank');
+            } else {
+                alert('Please enter a search query for Wikipedia.');
             }
         } else {
             // Default search functionality (if any)

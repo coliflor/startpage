@@ -13,6 +13,9 @@ This project is a simple web application that allows users to organize and visua
     * `:category-delete <name>`: Deletes an entire category with the specified name and all its links.
     * `:open <name>`: Opens the link with the specified name in the current tab.
     * `:open-new-tab <name>`: Opens the link with the specified name in a new tab.
+	* `:toggle-forms ` : Toggle open the forms.
+	* `:open-category <name>`: Opens all links in a given category.
+	* `:category-rename <name> `: Renames a given category.
 * **Command Autocomplete:** When typing a command (starting with `:`), the search bar will display a dropdown list of available commands as suggestions.
 
 It's built using Deno, a simple, modern, and secure runtime for JavaScript and TypeScript.

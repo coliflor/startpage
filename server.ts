@@ -34,7 +34,7 @@ async function writeLinks(categories: Category[]): Promise<void> {
 				await writeFile(LINKS_FILE, JSON.stringify({ categories }, null, 2), {
 						encoding: "utf-8",
 				});
-				console.log("Links updated successfully.");
+				//console.log("Links updated successfully.");
 		} catch (error) {
 				console.error("Error writing links file:", error);
 		}

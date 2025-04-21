@@ -193,6 +193,7 @@ h1 {
     display: flex;
     flex-wrap: wrap;
     margin-bottom: 5px;
+		margin-left: 8px;
     width: 100%;
 		z-index: 1;
 		justify-content: center;
